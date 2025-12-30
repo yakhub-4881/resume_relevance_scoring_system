@@ -1,0 +1,552 @@
+{
+  "name": "resume_relevance_scoring_system",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 1,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1ESwlnqV9rTTyFGyXlZly-uNZazIxx5ym",
+          "mode": "list",
+          "cachedResultName": "Resumes",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1ESwlnqV9rTTyFGyXlZly-uNZazIxx5ym"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        2144,
+        672
+      ],
+      "id": "8575f2f8-a77e-4aa7-a1c4-8a0b565e4b63",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "h332PRqNWBXxUfve",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1PJfEMfRj1dyakScHnssXrvbPv_xpMBHY",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "e5709819-41c7-40e9-91ba-bbf96c7a0e06",
+      "name": "Download Job Description",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2336,
+        672
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "h332PRqNWBXxUfve",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "id": "0a25486c-2959-4a6d-a6e3-95df37a1373d",
+      "name": "Extract Text from JD",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        2544,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Google Drive Trigger').item.json.id }}"
+        },
+        "options": {}
+      },
+      "id": "65e77f23-1b27-4156-9680-1a9d04c63a0b",
+      "name": "Download New Resume",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2768,
+        672
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "h332PRqNWBXxUfve",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "id": "3821ab96-8eb4-4d50-9187-c898dced8e4e",
+      "name": "Extract Text from Resume",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        2976,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "model": "llama-3.1-8b-instant",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        3184,
+        864
+      ],
+      "id": "036dbf39-9a72-4d69-9d86-f9a16bfeb8a7",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "AWem6dkmECi5uSbT",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3f930e48-502c-4248-b16d-3a6f846d94fb",
+              "leftValue": "={{ Number($node[\"AI Resume Evaluation\"].json[\"score\"] || 0) > 90 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3808,
+        880
+      ],
+      "id": "384727ae-6b5d-4a51-9645-8e3daf4b05f6",
+      "name": "Send Alert for Top Candidates"
+    },
+    {
+      "parameters": {
+        "sendTo": "syedyakhub9966@gmail.com",
+        "subject": "=🚨 Exceptional Candidate Alert: {{$json.name}} scored {{$json.score}}",
+        "message": "=URGENT: Strong candidate detected!  Candidate: {{$json.name}} Email: {{$json.email}} Phone: {{$json.phone}} Score: {{$json.score}}/100 Category: {{$json.category}}  Top Strengths: {{$json.strengths}}  Recommendation: {{$json.recommendation}}  Resume Link: {{$json.resumeLink}}  Action: Schedule interview immediately.  --- Automated by n8n Resume Scoring System",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4032,
+        864
+      ],
+      "id": "70e14557-1a52-43b4-82f7-1a1de8612b49",
+      "name": "Gmail Alert",
+      "webhookId": "687d8ac2-a5a2-4837-a63c-ca84bcadcff8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "d0HZHvRg3nBYGRwL",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// This runs even if errors occur\ntry {\n  return [{\n    json: {\n      status: \"Success\",\n      message: \"Workflow completed successfully\"\n    }\n  }];\n} catch (error) {\n  return [{\n    json: {\n      status: \"Error\",\n      message: error.message,\n      timestamp: new Date().toISOString()\n    }\n  }];\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3808,
+        480
+      ],
+      "id": "a0f91299-2f4c-4e02-8538-32d1794ad50c",
+      "name": "Error Handler"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert technical recruiter. Extract candidate fields and compute a numeric score using these exact rules. Return ONLY valid JSON.\n\nCRITICAL EMAIL EXTRACTION RULES (READ CAREFULLY)\n- Search resume text for email addresses ONLY in format: word@word.word (example: john@gmail.com)\n- If you find text like \"Email: john@gmail.com\" or \"Contact: john@gmail.com\", extract it\n- If you find text like \"GitHub: github.com/username\", this is NOT an email\n- If you find text like \"LinkedIn: linkedin.com/username\", this is NOT an email\n- username@github.com is FABRICATED and FORBIDDEN\n- username@linkedin.com is FABRICATED and FORBIDDEN\n- If no email address with @ symbol followed by domain exists in resume text, you MUST return null\n- Returning a fabricated email is a CRITICAL ERROR\n\nPHONE EXTRACTION RULES\n- Extract only actual phone numbers with digits\n- Do not extract URLs or social media links as phone numbers\n\nINPUTS\nJOB DESCRIPTION:\n{{$node[\"Extract Text from JD\"].json[\"text\"]}}\n\nRESUME:\n{{$node[\"Extract Text from Resume\"].json[\"text\"]}}\n\nOUTPUT JSON schema exactly (use null for missing fields)\n{\n  \"name\": \"Full Name\",\n  \"email\": null,\n  \"phone\": null,\n  \"score\": 0,\n  \"category\": \"\",\n  \"reasoning\": \"\",\n  \"strengths\": [],\n  \"weaknesses\": [],\n  \"redFlags\": [],\n  \"recommendation\": \"\",\n  \"resumeQualityScore\": 0\n}\n\nSCORING RULES to compute score deterministically\n1. Base score is 50. Add or subtract points by exact rules below.\n2. Experience years rule. If resume mentions 5 to 8 years add 10. If 9 or more add 15.\n3. Skills rule. For each of these present add points. Python add 8. Node.js add 8. AWS add 6. Databases add 5. Docker or Kubernetes add 5 each.\n4. If candidate has two or more leadership signals add 4.\n5. If major job hopping or gap found subtract 12 and add that as a red flag.\n6. Cap final score between 0 and 100. Round to nearest integer.\n7. category must match score ranges: 90 to 100 Exceptional, 80 to 89 Strong Match, 70 to 79 Good Match, 60 to 69 Moderate, 40 to 59 Weak, 0 to 39 Poor.\n8. resumeQualityScore must be an integer 0 to 100. Use format and legibility to set it. If not present set 50.\n\nFINAL VALIDATION BEFORE RETURNING JSON\n- Check email field. Does it contain @github.com or @linkedin.com? If YES, change to null immediately.\n- Check email field. Was this email explicitly written in the resume? If NO, change to null immediately.\n- Return only the JSON object. Do not write extra text. All arrays must be arrays, not string. Keep reasoning under 100 words.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        3184,
+        672
+      ],
+      "id": "d52a275a-7b35-4787-ae05-399b5f0a2f8a",
+      "name": "Combined Extraction + Scoring - Groq"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1EpSaq-t9Oh0VGwkSHBMO0USzvKIQhFpI7HQzBE8M6uk",
+          "mode": "list",
+          "cachedResultName": "Resume_Evaluation_Results",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1EpSaq-t9Oh0VGwkSHBMO0USzvKIQhFpI7HQzBE8M6uk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Results",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1EpSaq-t9Oh0VGwkSHBMO0USzvKIQhFpI7HQzBE8M6uk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Candidate Name": "={{$json.name}}",
+            "Email": "={{$json.email}}",
+            "Phone": "={{$json.phone}}",
+            "Resume Link": "={{$json.resumeLink}}",
+            "Score": "={{$json.score}}",
+            "Reasoning": "={{$json.reasoning}}",
+            "Category": "={{$json.category}}",
+            "Timestamp": "={{$json.timestamp}}",
+            "Resume Quality Score": "={{$json.resumeQualityScore}}",
+            "Quality Notes": "={{$json.qualityNotes}}",
+            "Red Flags": "={{$json.redFlags}}",
+            "Strengths": "={{$json.strengths}}",
+            "Recommendation": "={{$json.recommendation}}",
+            "Weaknesses": "={{$json.weaknesses}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Candidate Name",
+              "displayName": "Candidate Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Resume Link",
+              "displayName": "Resume Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Reasoning",
+              "displayName": "Reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Strengths",
+              "displayName": "Strengths",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Weaknesses",
+              "displayName": "Weaknesses",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Red Flags",
+              "displayName": "Red Flags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Resume Quality Score",
+              "displayName": "Resume Quality Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Quality Notes",
+              "displayName": "Quality Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Recommendation",
+              "displayName": "Recommendation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3808,
+        672
+      ],
+      "id": "8e1bea15-7709-48fd-9a7c-98c66d6fe341",
+      "name": "Update Google Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xRKnCZlZj50AQ6we",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\n  const all = $input.all ? $input.all() : [];\n  const entry = all.length ? (all[0].json || all[0]) : {};\n  const triggerData = $node[\"Google Drive Trigger\"]?.json || {};\n\n  let groqResponse =\n    entry.text ||\n    entry.content ||\n    entry.message?.content ||\n    entry.choices?.[0]?.message?.content ||\n    '';\n\n  // Clean code block safely\n  let cleanedResponse = String(groqResponse)\n    .replace(/```json/gi, '')\n    .replace(/```/g, '')\n    .trim();\n\n  let data;\n  try {\n    data = JSON.parse(cleanedResponse);\n  } catch {\n    const match = cleanedResponse.match(/\\{[\\s\\S]*\\}/);\n    if (!match) throw new Error('No JSON found');\n    data = JSON.parse(match[0]);\n  }\n\n  // EMAIL HANDLING\n  let emailOut = 'Not provided';\n  if (data.email && typeof data.email === 'string') {\n    const email = data.email.trim();\n\n    const isValid =\n      email.includes('@') &&\n      email.includes('.') &&\n      !email.includes('@github.com') &&\n      !email.includes('@linkedin.com');\n\n    if (isValid) {\n      emailOut = email;\n    }\n  }\n\n  // PHONE HANDLING\n  let phoneOut = 'Not provided';\n  if (data.phone && typeof data.phone === 'string') {\n    const digits = data.phone.replace(/\\D/g, '');\n\n    if (digits.length === 10) {\n      phoneOut = \"'+91 \" + digits;\n    } else if (digits.length === 12 && digits.startsWith('91')) {\n      phoneOut = \"'+91 \" + digits.slice(2);\n    } else if (digits.length > 0) {\n      phoneOut = \"'+\" + digits;\n    }\n  }\n\n  // RED FLAGS\n  let redFlags = [];\n\n  if (Array.isArray(data.redFlags)) {\n    redFlags = data.redFlags.map(r => String(r)).filter(Boolean);\n  }\n\n  if (emailOut === 'Not provided') {\n    redFlags.push('Missing email address');\n  }\n\n  if (phoneOut === 'Not provided') {\n    redFlags.push('Missing phone number');\n  }\n\n  // Resume quality impact\n  let resumeQualityScore = Number(data.resumeQualityScore) || 50;\n  if (emailOut === 'Not provided') resumeQualityScore -= 10;\n  if (phoneOut === 'Not provided') resumeQualityScore -= 10;\n  if (resumeQualityScore < 0) resumeQualityScore = 0;\n\n  // Helpers\n  function toText(value) {\n    if (Array.isArray(value)) return value.join(', ');\n    if (!value) return 'None identified';\n    return String(value);\n  }\n\n  const resumeLink = triggerData.id\n    ? 'https://drive.google.com/file/d/' + triggerData.id + '/view'\n    : 'Not available';\n\n  const timestamp = new Date().toLocaleString('en-IN', {\n    timeZone: 'Asia/Kolkata',\n    year: 'numeric',\n    month: 'short',\n    day: '2-digit',\n    hour: '2-digit',\n    minute: '2-digit',\n    hour12: true\n  });\n\n  return [{\n    json: {\n      name: data.name || 'Not provided',\n      email: emailOut,\n      phone: phoneOut,\n      resumeLink: resumeLink,\n      score: Number(data.score) || 0,\n      category: data.category || 'Not provided',\n      reasoning: data.reasoning || 'Not provided',\n      strengths: toText(data.strengths),\n      weaknesses: toText(data.weaknesses),\n      redFlags: redFlags.join(', ') || 'None identified',\n      resumeQualityScore: resumeQualityScore,\n      qualityNotes: data.qualityNotes || 'Standard format',\n      recommendation: data.recommendation || 'Review',\n      timestamp: timestamp\n    }\n  }];\n\n} catch (error) {\n  return [{\n    json: {\n      error: error.message,\n      name: 'Error',\n      email: 'Not provided',\n      phone: 'Not provided',\n      score: 0\n    }\n  }];\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        672
+      ],
+      "id": "ac2aaeb6-35d1-4ee0-b9ac-6a792520a0ff",
+      "name": "AI Resume Evaluation"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Download Job Description",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Job Description": {
+      "main": [
+        [
+          {
+            "node": "Extract Text from JD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Text from JD": {
+      "main": [
+        [
+          {
+            "node": "Download New Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download New Resume": {
+      "main": [
+        [
+          {
+            "node": "Extract Text from Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Text from Resume": {
+      "main": [
+        [
+          {
+            "node": "Combined Extraction + Scoring - Groq",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Combined Extraction + Scoring - Groq",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Alert for Top Candidates": {
+      "main": [
+        [
+          {
+            "node": "Gmail Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combined Extraction + Scoring - Groq": {
+      "main": [
+        [
+          {
+            "node": "AI Resume Evaluation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Google Sheet": {
+      "main": [
+        []
+      ]
+    },
+    "AI Resume Evaluation": {
+      "main": [
+        [
+          {
+            "node": "Update Google Sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Alert for Top Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c017d42a-b96d-45f0-b65c-e822b7c6ca7d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "73eb528b6e6d1155860fb382b4fa57b8fb73e47d64d400c09ad179ed357e436d"
+  },
+  "id": "Daup6hIQGw9jy77b",
+  "tags": []
+}
